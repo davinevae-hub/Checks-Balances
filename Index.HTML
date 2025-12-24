@@ -1,0 +1,254 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Checks & Balances – Budget, Spending, Debt</title>
+  <link rel="stylesheet" href="./styles.css" />
+
+  <!-- PDF export -->
+  <script defer src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js"></script>
+
+  <!-- Excel export -->
+  <script defer src="https://cdn.jsdelivr.net/npm/xlsx@0.20.3/dist/xlsx.full.min.js"></script>
+
+  <script defer src="./app.js"></script>
+</head>
+<body>
+  <header class="app-header">
+    <div>
+      <h1>Checks & Balances</h1>
+      <p class="sub">
+        Plan budget • Track spending • Compare vs budget • Build a debt payoff plan • Export PDF/Excel
+      </p>
+    </div>
+    <div class="header-actions">
+      <button id="btnExportPdf" class="btn secondary">Save as PDF</button>
+      <button id="btnExportExcel" class="btn secondary">Export Excel</button>
+      <button id="btnReset" class="btn danger">Reset</button>
+    </div>
+  </header>
+
+  <main class="grid">
+    <!-- INCOME -->
+    <section class="card">
+      <h2>Income (Monthly Take-Home Estimator)</h2>
+
+      <div class="row">
+        <label for="incomeFrequency">Pay frequency</label>
+        <select id="incomeFrequency">
+          <option value="monthly">Monthly</option>
+          <option value="semimonthly">Semi-monthly (24/yr)</option>
+          <option value="biweekly" selected>Bi-weekly (26/yr)</option>
+          <option value="weekly">Weekly (52/yr)</option>
+        </select>
+      </div>
+
+      <div class="row">
+        <label for="grossPerPaycheck">Gross per paycheck</label>
+        <input id="grossPerPaycheck" type="number" min="0" step="0.01" inputmode="decimal" value="0" />
+      </div>
+
+      <div class="row">
+        <label for="taxRatePct">Estimated withholding/tax rate (%)</label>
+        <input id="taxRatePct" type="number" min="0" max="60" step="0.1" inputmode="decimal" value="20" />
+      </div>
+
+      <div class="row">
+        <label for="otherDeductionsPerPaycheck">Other deductions per paycheck</label>
+        <input id="otherDeductionsPerPaycheck" type="number" min="0" step="0.01" inputmode="decimal" value="0" />
+      </div>
+
+      <div class="row">
+        <label for="otherMonthlyIncome">Other monthly income</label>
+        <input id="otherMonthlyIncome" type="number" min="0" step="0.01" inputmode="decimal" value="0" />
+      </div>
+
+      <div class="summary">
+        <div class="kpi">
+          <div class="kpi-label">Estimated Monthly Gross</div>
+          <div id="kpiMonthlyGross" class="kpi-value">$0.00</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-label">Estimated Monthly Take-Home</div>
+          <div id="kpiMonthlyNet" class="kpi-value accent">$0.00</div>
+        </div>
+      </div>
+
+      <p class="hint">
+        This is a simplified take-home estimate. Use your paystub to fine-tune withholding and deductions.
+      </p>
+    </section>
+
+    <!-- PLANNED BUDGET (EXPENSES) -->
+    <section class="card">
+      <h2>Planned Monthly Budget (Expenses)</h2>
+
+      <div class="inline">
+        <input id="expenseName" placeholder="Expense name (e.g., Rent)" autocomplete="off" />
+        <select id="expenseCategory"></select>
+        <input id="expenseAmount" type="number" min="0" step="0.01" inputmode="decimal" placeholder="Amount" />
+        <button id="btnAddExpense" class="btn">Add</button>
+      </div>
+
+      <div class="table-wrap">
+        <table aria-label="Planned monthly expenses">
+          <thead>
+            <tr>
+              <th>Name</th><th>Category</th><th class="right">Amount</th><th class="right">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="expenseTbody"></tbody>
+        </table>
+      </div>
+
+      <div class="summary">
+        <div class="kpi">
+          <div class="kpi-label">Planned Monthly Expenses</div>
+          <div id="kpiPlannedExpenses" class="kpi-value">$0.00</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-label">Cash Left (Net − Planned)</div>
+          <div id="kpiCashLeft" class="kpi-value accent">$0.00</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SPENDING LEDGER -->
+    <section class="card">
+      <h2>Actual Spending (Ledger)</h2>
+
+      <div class="row">
+        <label for="ledgerMonth">Ledger month</label>
+        <input id="ledgerMonth" type="month" />
+      </div>
+
+      <div class="inline spend">
+        <input id="spendDate" type="date" />
+        <select id="spendCategory"></select>
+        <input id="spendDesc" placeholder="Description" autocomplete="off" />
+        <input id="spendAmount" type="number" min="0" step="0.01" inputmode="decimal" placeholder="Amount" />
+        <button id="btnAddSpend" class="btn">Add</button>
+      </div>
+
+      <div class="table-wrap">
+        <table aria-label="Spending ledger">
+          <thead>
+            <tr>
+              <th>Date</th><th>Category</th><th>Description</th><th class="right">Amount</th><th class="right">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="spendTbody"></tbody>
+        </table>
+      </div>
+
+      <div class="summary">
+        <div class="kpi">
+          <div class="kpi-label">Actual Spending (Selected Month)</div>
+          <div id="kpiActualSpending" class="kpi-value">$0.00</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-label">Variance (Planned − Actual)</div>
+          <div id="kpiVariance" class="kpi-value accent">$0.00</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- BUDGET VS ACTUAL -->
+    <section class="card">
+      <h2>Checks & Balances (Budget vs Actual)</h2>
+
+      <div id="alerts" class="alerts" aria-live="polite"></div>
+
+      <div class="table-wrap">
+        <table aria-label="Budget vs actual by category">
+          <thead>
+            <tr>
+              <th>Category</th>
+              <th class="right">Planned</th>
+              <th class="right">Actual</th>
+              <th class="right">Remaining</th>
+              <th class="right">% Used</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="bvaTbody"></tbody>
+        </table>
+      </div>
+
+      <p class="hint">
+        Status rules: <strong>Over</strong> (actual &gt; planned), <strong>Near</strong> (≥ 90% used), <strong>OK</strong> (&lt; 90%).
+      </p>
+    </section>
+
+    <!-- DEBT PLANNER -->
+    <section class="card">
+      <h2>Debt Payoff Planner</h2>
+
+      <div class="inline debt">
+        <input id="debtName" placeholder="Debt name (e.g., Visa)" autocomplete="off" />
+        <input id="debtBalance" type="number" min="0" step="0.01" inputmode="decimal" placeholder="Balance" />
+        <input id="debtApr" type="number" min="0" step="0.01" inputmode="decimal" placeholder="APR (%)" />
+        <input id="debtMin" type="number" min="0" step="0.01" inputmode="decimal" placeholder="Min payment" />
+        <button id="btnAddDebt" class="btn">Add</button>
+      </div>
+
+      <div class="row">
+        <label for="payoffStrategy">Strategy</label>
+        <select id="payoffStrategy">
+          <option value="avalanche" selected>Avalanche (highest APR first)</option>
+          <option value="snowball">Snowball (lowest balance first)</option>
+        </select>
+      </div>
+
+      <div class="row">
+        <label for="extraPayment">Extra monthly payment</label>
+        <input id="extraPayment" type="number" min="0" step="0.01" inputmode="decimal" value="0" />
+      </div>
+
+      <div class="table-wrap">
+        <table aria-label="Debts">
+          <thead>
+            <tr>
+              <th>Name</th><th class="right">Balance</th><th class="right">APR</th><th class="right">Min</th><th class="right">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="debtTbody"></tbody>
+        </table>
+      </div>
+
+      <div class="summary">
+        <div class="kpi">
+          <div class="kpi-label">Total Debt</div>
+          <div id="kpiDebtTotal" class="kpi-value">$0.00</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-label">Estimated Payoff Time</div>
+          <div id="kpiPayoffTime" class="kpi-value accent">—</div>
+        </div>
+      </div>
+
+      <details>
+        <summary>Show payoff schedule</summary>
+        <div class="table-wrap">
+          <table aria-label="Payoff schedule">
+            <thead>
+              <tr>
+                <th>Month</th><th>Target</th>
+                <th class="right">Paid</th><th class="right">Interest</th><th class="right">Principal</th>
+                <th class="right">Total Balance Remaining</th>
+              </tr>
+            </thead>
+            <tbody id="payoffTbody"></tbody>
+          </table>
+        </div>
+      </details>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <small>Data is stored locally in your browser (LocalStorage). Exports do not transmit your data anywhere.</small>
+  </footer>
+</body>
+</html>
